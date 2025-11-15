@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['khong loi', 'loi meo sp', 'loi rach va lap chai']
+
+roboflow:
+  workspace: bottle-defect-detection-8leya
+  project: project-bottle-defect-detection-5zy5f
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/bottle-defect-detection-8leya/project-bottle-defect-detection-5zy5f/dataset/2

@@ -2,3 +2,5 @@ flask
 ultralytics
 matplotlib
 werkzeug
+torchvision
+opencv-python

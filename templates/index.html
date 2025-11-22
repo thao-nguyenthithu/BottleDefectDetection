@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Multi-Image Defect Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin-top: 40px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .upload-btn {
+            background: #007bff;
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 8px;
+        }
+
+        .result-box {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            text-align: center;
+            height: 100%;
+            transition: transform 0.2s;
+        }
+
+        .result-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .result-content {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .filename-label {
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: #555;
+            word-wrap: break-word;
+        }
+
+        /* Style cho Video Player */
+        .video-wrapper {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-width: 320px;
+            min-height: 300px;
+            margin-bottom: 15px;
+        }
+
+        #videoStream {
+            width: 50%;
+            height: auto;
+            min-width: 320px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .train-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .train-btn:hover {
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container position-relative">
+        <a href="/train_results" class="train-btn">Xem kết quả Train &rarr;</a>
+
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold">Bottle Defect Detection</h1>
+            <p class="text-muted">Hệ thống phát hiện lỗi chai nước sử dụng Yolov11</p>
+        </div>
+
+        <div class="card p-5">
+            <form method="post" enctype="multipart/form-data" class="row g-3 align-items-center justify-content-center">
+                <div class="col-md-8">
+                    <input type="file" name="file" class="form-control form-control-lg" multiple required>
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn upload-btn w-100">Kiểm tra Ngay</button>
+                </div>
+            </form>
+        </div>
+
+        {% if video_mode %}
+        <div class="card p-4 text-center">
+            <h4 class="mb-3">Video Stream Realtime</h4>
+
+            <div class="video-wrapper">
+                <img id="videoStream" src="/video_feed" crossorigin="anonymous">
+            </div>
+
+            <div class="controls">
+                <button onclick="replayVideo()" class="btn btn-primary btn-sm">
+                    <i class="bi bi-arrow-counterclockwise"></i> Phát Lại
+                </button>
+                <button onclick="pauseVideo()" class="btn btn-warning btn-sm text-white">
+                    <i class="bi bi-pause-fill"></i> Tạm Dừng
+                </button>
+                <button onclick="resumeVideo()" class="btn btn-success btn-sm">
+                    <i class="bi bi-play-fill"></i> Tiếp Tục
+                </button>
+            </div>
+
+            <p id="statusText" class="text-success mt-2 fw-bold">Đang xử lý video...</p>
+        </div>
+        {% endif %}
+
+        {% if image_results %}
+        <div class="card p-4">
+            <h4 class="mb-4">Kết quả xử lý {{ image_results|length }} ảnh</h4>
+            <div class="row g-3">
+                {% for item in image_results %}
+                <div class="col-6 col-md-4">
+                    <div class="result-box">
+                        <img src="data:image/jpeg;base64,{{ item.b64 }}" class="result-content" loading="lazy">
+                        <div class="filename-label">{{ item.name }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        const streamUrl = "/video_feed";
+
+        function replayVideo() {
+            var video = document.getElementById('videoStream');
+            var status = document.getElementById('statusText');
+            video.src = streamUrl + "?t=" + new Date().getTime();
+            status.innerText = "Đang phát lại từ đầu...";
+            status.className = "text-primary mt-2 fw-bold";
+        }
+
+        function pauseVideo() {
+            var video = document.getElementById('videoStream');
+            var status = document.getElementById('statusText');
+
+            var canvas = document.createElement("canvas");
+            canvas.width = video.naturalWidth;
+            canvas.height = video.naturalHeight;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            var staticFrameData = canvas.toDataURL("image/jpeg", 0.8);
+
+            video.src = staticFrameData;
+            status.innerText = "Đã tạm dừng";
+            status.className = "text-warning mt-2 fw-bold";
+        }
+
+        function resumeVideo() {
+            var video = document.getElementById('videoStream');
+            var status = document.getElementById('statusText');
+            video.src = streamUrl + "?t=" + new Date().getTime();
+            status.innerText = "Đang tiếp tục...";
+            status.className = "text-success mt-2 fw-bold";
+        }
+    </script>
+</body>
+
+</html>
